@@ -195,6 +195,7 @@ const W = scene.width ?? 1280, H = scene.height ?? 720;
 const FPS = scene.fps ?? 30, DUR = scene.duration ?? 10;
 const token = process.env.CESIUM_ION_TOKEN || '';
 const tileTimeout = process.env.TILE_TIMEOUT_MS || '12000';
+const settleMs = process.env.SETTLE_MS || '500';   // per-frame "tiles stayed loaded" window
 const WORKERS = workersArg ? Math.max(1, parseInt(workersArg.split('=')[1] || '2'))
   : (scene.buildings3d ? 1 : Math.min(2, Math.max(1, Math.floor(cpus().length / 4))));
 
@@ -229,7 +230,7 @@ const server = createServer((req, res) => {
 await new Promise(r => server.listen(0, '127.0.0.1', r));
 const port = server.address().port;
 const htmlUrl = new URL(`http://127.0.0.1:${port}/flyover.html`);
-htmlUrl.search = `?tileTimeout=${tileTimeout}`;
+htmlUrl.search = `?tileTimeout=${tileTimeout}&settle=${settleMs}`;
 
 console.log(`scene=${scene.name}  ${W}x${H}@${FPS}fps  ${DUR}s  workers=${WORKERS}`);
 console.log(`imagery: ${token ? 'Cesium ion (World Imagery + 3D Terrain)' : 'Esri World Imagery fallback, FLAT terrain (set CESIUM_ION_TOKEN for 3D)'}${scene.buildings3d ? ' + Google Photorealistic 3D Tiles' : ''}`);

@@ -144,4 +144,6 @@ node render.mjs <scene>.json <outdir> --preview
 - Keep per-shot heading change < 120° or motion looks swimmy.
 - POI `appear` slightly after the camera settles; title after the fly-in.
 - If frames show blank/black ocean tiles, increase `TILE_TIMEOUT_MS` env or slow the camera.
+- **No "map refreshing" flicker**: every frame waits until tiles are loaded AND have *stayed* loaded for `SETTLE_MS` (default 500 ms) before capture — so you never grab a still-streaming frame that resolves sharper on the next one. For heavy scenes (low-altitude travel, high `verticalExaggeration`, 4K) render with `TILE_TIMEOUT_MS=60000 SETTLE_MS=500` so tiles have room to fully settle. Raising `SETTLE_MS` (e.g. 800) trades render time for rock-steady frames.
+- **Pace for readability**: ground speed = path length ÷ duration. If cities/terrain blur past, double the `duration`. A 1000 km corridor wants ~60 s to actually read the places.
 - Attribution: Cesium ion imagery requires visible attribution — the renderer keeps the Cesium credit container visible; do not crop it out for published videos.

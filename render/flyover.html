@@ -317,15 +317,29 @@ window.__frame = async function(t) {
   fadeDiv.style.background = col;
   fadeDiv.style.opacity = op;
 
-  const timeout = Number(new URLSearchParams(location.search).get('tileTimeout')) || 12000;
+  // Wait until the globe/3D-tiles are FULLY loaded AND have stayed loaded for a settle
+  // window — capturing the moment tilesLoaded first flips true grabs a still-streaming
+  // frame, so consecutive frames look like the map is "refreshing". Requiring stability
+  // means every captured frame is fully resolved.
+  const qp = new URLSearchParams(location.search);
+  const timeout = Number(qp.get('tileTimeout')) || 12000;
+  const settleMs = Number(qp.get('settle')) || 500;   // must stay loaded this long before capture
   const t0 = performance.now();
+  let stableSince = null;
   await new Promise(resolve => {
     function check() {
       viewer.scene.requestRender();
       const globeOk = !viewer.scene.globe.show || viewer.scene.globe.tilesLoaded;
       const tsOk = !TILESET || TILESET.tilesLoaded;
-      if ((globeOk && tsOk) || performance.now() - t0 > timeout) resolve();
-      else setTimeout(check, 100);
+      const now = performance.now();
+      if (globeOk && tsOk) {
+        if (stableSince === null) stableSince = now;
+        if (now - stableSince >= settleMs) return resolve();   // fully settled
+      } else {
+        stableSince = null;                                    // new tiles streaming — reset
+      }
+      if (now - t0 > timeout) return resolve();                // hard cap
+      setTimeout(check, 80);
     }
     check();
   });

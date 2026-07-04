@@ -1,0 +1,9 @@
+{
+  "name": "geo-flyover-renderer",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "cesium": "^1.119.0",
+    "puppeteer-core": "^23.0.0"
+  }
+}

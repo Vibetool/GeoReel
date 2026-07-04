@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script>window.CESIUM_BASE_URL = '/cesium/';</script>
+  <script src="/cesium/Cesium.js"></script>
+  <link href="/cesium/Widgets/widgets.css" rel="stylesheet">
+  <style>
+    html, body, #cesium { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; }
+    .cesium-viewer-bottom { font-size: 9px !important; opacity: 0.7; }
+    #fade { position: fixed; inset: 0; opacity: 0; pointer-events: none; z-index: 99; background: #fff; }
+  </style>
+</head>
+<body>
+<div id="cesium"></div>
+<div id="fade"></div>
+<script>
+'use strict';
+let viewer, CFG, FS = 1, TILESET = null;
+let routeEntities = [], poiEntities = [], titleEntity = null, regionEntities = [];
+const fadeDiv = document.getElementById('fade');
+
+const ease = t => t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3) / 2;
+const clamp01 = x => Math.max(0, Math.min(1, x));
+const backOut = u => { const c1 = 1.70158, c3 = c1 + 1;
+  return 1 + c3 * Math.pow(u - 1, 3) + c1 * Math.pow(u - 1, 2); };
+function lerp(a, b, u) { return a + (b - a) * u; }
+function lerpAngle(a, b, u) {
+  let d = ((b - a + 540) % 360) - 180;
+  return a + d * u;
+}
+
+function cameraAt(t) {
+  const kf = CFG.cameraPath;
+  if (t <= kf[0].t) return kf[0];
+  if (t >= kf[kf.length-1].t) return kf[kf.length-1];
+  let i = 0;
+  while (i < kf.length - 2 && t > kf[i+1].t) i++;
+  const a = kf[i], b = kf[i+1];
+  const raw = b.t === a.t ? 1 : (t - a.t) / (b.t - a.t);       // guard: cut boundary jumps
+  const u = (a.lin || b.lin) ? raw : ease(raw);                // travel keyframes pan at constant speed
+  return {
+    lng: lerp(a.lng, b.lng, u), lat: lerp(a.lat, b.lat, u),
+    alt: lerp(a.alt, b.alt, u), heading: lerpAngle(a.heading||0, b.heading||0, u),
+    pitch: lerp(a.pitch??-90, b.pitch??-90, u)
+  };
+}
+// segment rendering (crossfade): swap the active camera path, overlays keep global t
+window.__setCameraPath = kfs => { CFG.cameraPath = kfs; };
+
+function pathPrefix(path, frac) {
+  if (frac >= 1) return path;
+  const pts = path.map(p => Cesium.Cartesian3.fromDegrees(p[0], p[1]));
+  const segs = []; let total = 0;
+  for (let i = 1; i < pts.length; i++) {
+    const d = Cesium.Cartesian3.distance(pts[i-1], pts[i]); segs.push(d); total += d;
+  }
+  let want = total * frac, out = [path[0]];
+  for (let i = 0; i < segs.length; i++) {
+    if (want >= segs[i]) { out.push(path[i+1]); want -= segs[i]; }
+    else {
+      const u = want / segs[i];
+      out.push([ lerp(path[i][0], path[i+1][0], u), lerp(path[i][1], path[i+1][1], u) ]);
+      break;
+    }
+  }
+  return out;
+}
+
+// ---------- leader line images (cached canvas per height bucket) ----------
+const leaderCache = {};
+function leaderImage(h) {
+  if (leaderCache[h]) return leaderCache[h];
+  const c = document.createElement('canvas');
+  c.width = 6; c.height = h;
+  const g = c.getContext('2d');
+  g.strokeStyle = 'rgba(0,0,0,0.9)'; g.lineWidth = 4;
+  g.beginPath(); g.moveTo(3, 0); g.lineTo(3, h); g.stroke();
+  g.strokeStyle = 'rgba(255,255,255,0.95)'; g.lineWidth = 2;
+  g.beginPath(); g.moveTo(3, 0); g.lineTo(3, h); g.stroke();
+  leaderCache[h] = c;
+  return c;
+}
+
+// ---------- label anti-collision (screen space, sticky offsets) ----------
+function labelRect(x, y, text, fontPx, baseY, extraUp) {
+  const w = text.length * fontPx + 10;
+  const h = fontPx * 1.35;
+  const bottom = y + baseY - extraUp;
+  return { l: x - w/2, r: x + w/2, t: bottom - h, b: bottom };
+}
+function rectsOverlap(a, b) { return a.l < b.r && b.l < a.r && a.t < b.b && b.t < a.b; }
+
+function resolveLabelCollisions() {
+  const s2w = Cesium.SceneTransforms.wgs84ToWindowCoordinates
+           || Cesium.SceneTransforms.worldToWindowCoordinates;
+  const now = Cesium.JulianDate.now();
+  const items = [];
+  for (const p of poiEntities) if (p.e.show)
+    items.push({ o: p, fontPx: 15*FS, baseY: -14*FS, title: false });
+  if (titleEntity && titleEntity.e.show)
+    items.push({ o: titleEntity, fontPx: 54*FS, baseY: -10*FS, title: true });
+  for (const it of items) {
+    const pos = it.o.e.position.getValue(now);
+    const win = pos && s2w(viewer.scene, pos);
+    if (!win || !isFinite(win.x)) { it.skip = true; continue; }
+    it.x = win.x; it.y = win.y;
+  }
+  const placed = [];
+  const pois = items.filter(i => !i.title && !i.skip).sort((a,b) => a.y - b.y);
+  const title = items.find(i => i.title && !i.skip);
+  for (const it of [...pois, ...(title ? [title] : [])]) {
+    const text = it.o.e.label.text.getValue(now);
+    const steps = it.title ? [0, 36, 72, 108, 144] : [0, 24, 48, 72];
+    const candidates = [it.o.stickyUp ?? 0, ...steps.filter(c => c !== (it.o.stickyUp ?? 0))];
+    let chosen = candidates[candidates.length - 1];
+    for (const c of candidates) {
+      const r = labelRect(it.x, it.y, text, it.fontPx, it.baseY, c * FS);
+      if (!placed.some(p => rectsOverlap(p, r))) { chosen = c; break; }
+    }
+    it.o.stickyUp = chosen;
+    placed.push(labelRect(it.x, it.y, text, it.fontPx, it.baseY, chosen * FS));
+    it.o.e.label.pixelOffset = new Cesium.Cartesian2(0, it.baseY - chosen * FS);
+    // leader line fills the gap when the label was pushed up
+    if (!it.title && it.o.leader) {
+      if (chosen > 0) {
+        const h = Math.round(chosen * FS);
+        it.o.leader.billboard.image = leaderImage(h);
+        it.o.leader.billboard.pixelOffset = new Cesium.Cartesian2(0, -10 * FS);
+        it.o.leader.show = it.o.e.show;
+      } else it.o.leader.show = false;
+    }
+  }
+}
+// --------------------------------------------------------------------------
+
+window.__setup = async function(cfg, ionToken) {
+  CFG = cfg;
+  FS = (cfg.height || 720) / 720;
+  let imageryProvider, terrainProvider;
+  if (ionToken) {
+    Cesium.Ion.defaultAccessToken = ionToken;
+    terrainProvider = await Cesium.createWorldTerrainAsync();
+  } else {
+    imageryProvider = new Cesium.UrlTemplateImageryProvider({
+      url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      credit: 'Esri World Imagery'
+    });
+    terrainProvider = new Cesium.EllipsoidTerrainProvider();
+  }
+  viewer = new Cesium.Viewer('cesium', {
+    terrainProvider,
+    ...(imageryProvider ? { baseLayer: new Cesium.ImageryLayer(imageryProvider) } : {}),
+    animation: false, timeline: false, baseLayerPicker: false, geocoder: false,
+    homeButton: false, sceneModePicker: false, navigationHelpButton: false,
+    fullscreenButton: false, infoBox: false, selectionIndicator: false,
+    requestRenderMode: false, msaaSamples: 4
+  });
+  if (ionToken) {
+    const world = await Cesium.ImageryLayer.fromProviderAsync(
+      Cesium.IonImageryProvider.fromAssetId(2));
+    viewer.imageryLayers.removeAll(); viewer.imageryLayers.add(world);
+  }
+  viewer.scene.globe.maximumScreenSpaceError = 1.5;
+  viewer.scene.fog.enabled = true;
+  viewer.scene.skyAtmosphere.show = true;
+
+  // Google Photorealistic 3D Tiles (ion asset 2275207) — requires ion token
+  if (cfg.buildings3d && ionToken) {
+    TILESET = await Cesium.Cesium3DTileset.fromIonAssetId(2275207, {
+      maximumScreenSpaceError: cfg.buildings3dQuality ?? 16,
+    });
+    viewer.scene.primitives.add(TILESET);
+    viewer.scene.globe.show = false;      // tiles include their own terrain+imagery
+  } else if (cfg.buildings3d) {
+    console.warn('buildings3d requires CESIUM_ION_TOKEN — ignored');
+  }
+
+  for (const p of (cfg.pois || [])) {
+    const rec = { appear: p.appear ?? 0, lng: p.lng, lat: p.lat, e: viewer.entities.add({
+      position: Cesium.Cartesian3.fromDegrees(p.lng, p.lat, 0),
+      point: { pixelSize: 9*FS, color: Cesium.Color.fromCssColorString('#35e05a'),
+               outlineColor: Cesium.Color.WHITE, outlineWidth: 2*FS,
+               heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+               disableDepthTestDistance: Number.POSITIVE_INFINITY },
+      label: { text: p.name, font: `bold ${Math.round(15*FS)}px "PingFang SC", sans-serif`,
+               fillColor: Cesium.Color.WHITE, outlineColor: Cesium.Color.BLACK,
+               outlineWidth: 3*FS, style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+               pixelOffset: new Cesium.Cartesian2(0, -14*FS),
+               verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+               heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+               disableDepthTestDistance: Number.POSITIVE_INFINITY },
+      show: false }) };
+    rec.leader = viewer.entities.add({
+      position: Cesium.Cartesian3.fromDegrees(p.lng, p.lat, 0),
+      billboard: { image: leaderImage(24), verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+                   heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+                   disableDepthTestDistance: Number.POSITIVE_INFINITY },
+      show: false });
+    poiEntities.push(rec);
+  }
+  if (cfg.title) {
+    titleEntity = { appear: cfg.title.appear ?? 0, lng: cfg.title.lng, lat: cfg.title.lat,
+      e: viewer.entities.add({
+        position: Cesium.Cartesian3.fromDegrees(cfg.title.lng, cfg.title.lat, 0),
+        label: { text: cfg.title.text, font: `bold ${Math.round(54*FS)}px "PingFang SC", sans-serif`,
+                 fillColor: Cesium.Color.WHITE, outlineColor: Cesium.Color.BLACK,
+                 outlineWidth: 5*FS, style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+                 pixelOffset: new Cesium.Cartesian2(0, -10*FS),
+                 verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+                 heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+                 disableDepthTestDistance: Number.POSITIVE_INFINITY },
+        show: false }) };
+  }
+  // anchor labels at true terrain height so screen-space projection is accurate
+  if (ionToken) {
+    try {
+      const anchors = [...poiEntities, ...(titleEntity ? [titleEntity] : [])];
+      const cartos = anchors.map(a => Cesium.Cartographic.fromDegrees(a.lng, a.lat));
+      await Cesium.sampleTerrainMostDetailed(viewer.terrainProvider, cartos);
+      anchors.forEach((a, i) => {
+        const pos = Cesium.Cartesian3.fromDegrees(a.lng, a.lat, cartos[i].height + 2);
+        a.e.position = pos;
+        if (a.e.point) a.e.point.heightReference = Cesium.HeightReference.NONE;
+        a.e.label.heightReference = Cesium.HeightReference.NONE;
+        if (a.leader) { a.leader.position = pos;
+          a.leader.billboard.heightReference = Cesium.HeightReference.NONE; }
+      });
+    } catch (e) { console.warn('terrain sampling failed, labels stay clamped:', e); }
+  }
+
+  window.__t = 0;
+  for (const r of (cfg.routes || [])) {
+    routeEntities.push(viewer.entities.add({
+      polyline: {
+        positions: new Cesium.CallbackProperty(() => {
+          const f = window.__showAll ? 1 :
+            clamp01((window.__t - r.tStart) / (r.tEnd - r.tStart));
+          if (f <= 0) return [];
+          return Cesium.Cartesian3.fromDegreesArray(pathPrefix(r.path, f).flat());
+        }, false),
+        clampToGround: true, width: (r.width || 8) * FS,
+        material: new Cesium.PolylineGlowMaterialProperty({
+          glowPower: 0.25, taperPower: 1,
+          color: Cesium.Color.fromCssColorString(r.color || '#ffe94a') })
+      }}));
+  }
+  for (const g of (cfg.regions || [])) {
+    const closed = g.polygon.concat([g.polygon[0]]);
+    const tS = g.tStart ?? g.appear ?? 0;
+    const tE = g.tEnd ?? (tS + 0.22);
+    const col = Cesium.Color.fromCssColorString(g.color || '#ffe94a');
+    regionEntities.push(viewer.entities.add({
+      polyline: {
+        positions: new Cesium.CallbackProperty(() => {
+          const f = window.__showAll ? 1 : clamp01((window.__t - tS) / (tE - tS));
+          if (f <= 0) return [];
+          return Cesium.Cartesian3.fromDegreesArray(pathPrefix(closed, f).flat());
+        }, false),
+        clampToGround: true, width: (g.width || 6) * FS,
+        material: new Cesium.PolylineGlowMaterialProperty({ glowPower: 0.3, color: col })
+      }}));
+    if (g.fill) {
+      const maxA = g.fillOpacity ?? 0.12;
+      regionEntities.push(viewer.entities.add({
+        polygon: {
+          hierarchy: Cesium.Cartesian3.fromDegreesArray(g.polygon.flat()),
+          material: new Cesium.ColorMaterialProperty(new Cesium.CallbackProperty(() => {
+            const a = window.__showAll ? maxA :
+              maxA * clamp01((window.__t - tE) / 0.08);
+            return col.withAlpha(a);
+          }, false)),
+          classificationType: Cesium.ClassificationType.BOTH
+        }}));
+    }
+  }
+  return true;
+};
+
+// POI pop-in: back-ease scale bounce on the dot, fade/slide on the label
+function animatePois(t) {
+  const animT = 0.6 / (CFG.duration || 10);      // 0.6 s pop, in timeline units
+  for (const p of poiEntities) {
+    const shown = window.__showAll || t >= p.appear;
+    p.e.show = shown;
+    if (!shown) { if (p.leader) p.leader.show = false; continue; }
+    const u = window.__showAll ? 1 : clamp01((t - p.appear) / animT);
+    const s = Math.max(0.01, backOut(u));
+    p.e.point.pixelSize = 9 * FS * s;
+    const a = u * u;                              // label trails the dot slightly
+    p.e.label.fillColor = Cesium.Color.WHITE.withAlpha(a);
+    p.e.label.outlineColor = Cesium.Color.BLACK.withAlpha(a);
+    p.u = u;
+  }
+}
+
+window.__frame = async function(t) {
+  window.__t = t;
+  const c = cameraAt(t);
+  viewer.camera.setView({
+    destination: Cesium.Cartesian3.fromDegrees(c.lng, c.lat, c.alt),
+    orientation: { heading: Cesium.Math.toRadians(c.heading),
+                   pitch: Cesium.Math.toRadians(c.pitch), roll: 0 }
+  });
+  animatePois(t);
+  if (titleEntity) titleEntity.e.show = window.__showAll || t >= titleEntity.appear;
+
+  let op = 0, col = '#ffffff';
+  for (const tr of (CFG.transitions || [])) {
+    const half = tr.dur / 2, d = Math.abs(t - tr.t);
+    if (d < half) { const o = 1 - d / half; if (o > op) { op = o; col = tr.color; } }
+  }
+  fadeDiv.style.background = col;
+  fadeDiv.style.opacity = op;
+
+  const timeout = Number(new URLSearchParams(location.search).get('tileTimeout')) || 12000;
+  const t0 = performance.now();
+  await new Promise(resolve => {
+    function check() {
+      viewer.scene.requestRender();
+      const globeOk = !viewer.scene.globe.show || viewer.scene.globe.tilesLoaded;
+      const tsOk = !TILESET || TILESET.tilesLoaded;
+      if ((globeOk && tsOk) || performance.now() - t0 > timeout) resolve();
+      else setTimeout(check, 100);
+    }
+    check();
+  });
+  resolveLabelCollisions();
+  await new Promise(r => setTimeout(r, 60));
+  return true;
+};
+</script>
+</body>
+</html>

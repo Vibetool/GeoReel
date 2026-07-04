@@ -1,0 +1,17 @@
+{
+  "name": "shanghai-3dtiles",
+  "width": 1280, "height": 720, "fps": 30,
+  "buildings3d": true,
+  "shots": [
+    { "type": "flyin", "duration": 5, "pitch": -22, "viewFrom": 210,
+      "target": [121.5035, 31.2360], "radius": 550, "targetHeight": 220,
+      "distanceFactor": 3.0, "minSlant": 1600 },
+    { "type": "orbit", "duration": 6, "sweep": 40, "approach": 0.85 }
+  ],
+  "title": { "text": "陆家嘴", "lng": 121.5085, "lat": 31.2445, "appear": 0.30 },
+  "pois": [
+    { "name": "东方明珠", "lng": 121.4998, "lat": 31.2397, "appear": 0.35 },
+    { "name": "金茂大厦", "lng": 121.5017, "lat": 31.2336, "appear": 0.42 },
+    { "name": "上海中心", "lng": 121.5057, "lat": 31.2335, "appear": 0.49 }
+  ]
+}

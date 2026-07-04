@@ -1,0 +1,36 @@
+{
+  "name": "taishan-showcase",
+  "preset": "1080p", "fps": 30,
+  "shots": [
+    { "type": "flyin", "duration": 5, "pitch": -33, "viewFrom": 178 },
+    { "type": "orbit", "duration": 6, "sweep": -14 },
+    { "type": "flyin", "duration": 4, "cut": true, "transition": "white",
+      "target": "玉皇顶·山顶", "radius": 1200, "targetHeight": 1530,
+      "pitch": -30, "viewFrom": 165, "distanceFactor": 4.5 },
+    { "type": "orbit", "duration": 5, "sweep": 20 }
+  ],
+  "title": { "text": "泰山", "lng": 117.108, "lat": 36.270, "appear": 0.30 },
+  "pois": [
+    { "name": "红门",   "lng": 117.1250, "lat": 36.2085, "appear": 0.30 },
+    { "name": "中天门", "lng": 117.1090, "lat": 36.2295, "appear": 0.33 },
+    { "name": "南天门", "lng": 117.1040, "lat": 36.2505, "appear": 0.36 },
+    { "name": "玉皇顶·山顶", "lng": 117.1056, "lat": 36.2544, "appear": 0.39 }
+  ],
+  "routes": [
+    { "color": "#ffe94a", "width": 9, "tStart": 0.40, "tEnd": 0.53,
+      "path": [
+        [117.1250, 36.2085], [117.1210, 36.2160], [117.1160, 36.2220],
+        [117.1090, 36.2295], [117.1050, 36.2380], [117.1035, 36.2465],
+        [117.1040, 36.2505], [117.1056, 36.2544]
+      ] }
+  ],
+  "regions": [
+    { "color": "#66e0ff", "width": 6, "tStart": 0.06, "tEnd": 0.24,
+      "fill": true, "fillOpacity": 0.10,
+      "polygon": [
+        [117.060, 36.190], [117.048, 36.235], [117.075, 36.280],
+        [117.128, 36.292], [117.172, 36.262], [117.175, 36.212],
+        [117.130, 36.192]
+      ] }
+  ]
+}

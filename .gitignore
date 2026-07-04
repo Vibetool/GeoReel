@@ -1,0 +1,10 @@
+node_modules/
+*.mp4
+*.aiff
+*.m4a
+*.mp3
+frames/
+seg*/
+preview_*.png
+out/
+.DS_Store

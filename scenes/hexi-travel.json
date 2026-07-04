@@ -1,10 +1,11 @@
 {
   "name": "hexi-travel",
   "preset": "1080p", "fps": 30,
+  "verticalExaggeration": 2.3,
   "shots": [
-    { "type": "travel", "duration": 16,
-      "offsetBearing": 32, "offsetDist": 95000, "alt": 40000,
-      "targetHeight": 1800, "samples": 16, "lookAhead": 0.06 }
+    { "type": "travel", "duration": 32,
+      "offsetBearing": 32, "offsetDist": 52000, "alt": 16000,
+      "targetHeight": 3400, "samples": 26, "lookAhead": 0.05 }
   ],
   "title": { "text": "河西走廊", "lng": 101.6, "lat": 38.9, "appear": 0.12 },
   "pois": [

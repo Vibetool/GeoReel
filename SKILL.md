@@ -48,7 +48,18 @@ Renders a Cesium (CesiumJS) 3D globe scene frame-by-frame in headless Chrome, th
   "lookAhead": 0.06,         // bias the look-at point forward along the path (0..0.15 = travel feel)
   "reverse": false }         // travel the path end→start instead
 ```
-The camera holds a constant lateral offset + altitude and glides from one end of the path to the other, always looking at the moving path point (linear interpolation = constant-speed pan, no easing pump). This is the RIGHT tool for a ~1000 km corridor: a static shot must go to space to see it all, but a travel shot stays low and reveals it over time. Set each POI's `appear` to roughly when the camera passes it; POIs behind the camera naturally leave frame. Draw the route with `tStart`/`tEnd` spanning the shot so the line unspools as you fly.
+The camera holds a constant lateral offset + altitude and glides from one end of the path to the other, always looking at the moving path point (linear interpolation = constant-speed pan, no easing pump). This is the RIGHT tool for a ~1000 km corridor: a static shot must go to space to see it all, but a travel shot stays low and reveals it over time.
+
+**Pacing & relief for travel shots** (learned tuning the Hexi Corridor):
+- **Speed** = path length ÷ duration. A 1000 km corridor in 16 s is a blur; give it ~30 s+ so cities are readable. Ground speed over ~30 km/s reads as "too fast".
+- **Relief (feeling the mountain-vs-plain height drop)** needs three things together: a LOW camera (`alt` ~12–18 km, not 40 km — high altitude flattens everything), a SHALLOW look angle (large `offsetDist` relative to `alt` → pitch ~-12..-16°, so peaks rise against the horizon instead of being looked down on), and scene-level `"verticalExaggeration": 2.0–2.5` (see below). Top-down + far = flat; low + shallow + exaggerated = dramatic.
+
+## verticalExaggeration (scene-level) — make terrain relief pop
+
+```jsonc
+"verticalExaggeration": 2.3   // multiply all terrain heights; 1 = real, 2–2.5 = the 三维地图看世界 look
+```
+The single biggest lever for conveying elevation. Mountain ranges stand up as walls; canyon/gully relief becomes legible from a distance. POI/label/route anchors are height-adjusted to match, so nothing floats or sinks. Use it for any terrain-relief story (corridors, ranges, canyons); leave it at 1 for city (`buildings3d`) shots. Set each POI's `appear` to roughly when the camera passes it; POIs behind the camera naturally leave frame. Draw the route with `tStart`/`tEnd` spanning the shot so the line unspools as you fly.
 
 The compiler centers flyin/orbit on the bounding box of all POIs/routes/regions (or the shot's `target`), computes slant range from spread (`distanceFactor`, default 3.8), derives heading from bearing math automatically, and warns if any in-segment POI drifts >28° off-axis (travel shots skip this check — they pan past POIs by design). Total duration = sum of shot durations. `cut: true` jumps the camera at the shot boundary under a dip-to-white/black transition (`transition`, `transitionDuration` default 0.8s). Hand-written `cameraPath` still works for full control.
 

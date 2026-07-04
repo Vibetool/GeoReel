@@ -6,6 +6,7 @@ MVP（已做）：单场景 JSON → 三维飞行 + POI 打点 + 发光路线描
 - [x] Cesium ion World Terrain 立体地形 — 已验证（泰山/普陀山成片）
 - [x] 1920x1080 / 4K 预设 — 已实现 preset 字段，UI 元素随分辨率等比缩放
 - [x] Google Photorealistic 3D Tiles — 已实现 buildings3d 选项（ion asset 2275207，隐藏 globe，等待 tileset 加载）；城市近景要点：minSlant 1200–2000 + pitch -18~-25 + targetHeight 半楼高
+- [x] 地形垂直夸张 verticalExaggeration — 已实现：场景级参数(2~2.5倍)，山体拔地而起、落差感强；POI/标签/路线锚点同步抬升不悬浮。配合低机位+浅俯角是"落差感"三件套
 - [ ] 大气/光照调优：太阳角度按拍摄时间设定，海面高光
 
 ## P0 — 实战暴露的问题（普陀山/泰山两次成片得出）

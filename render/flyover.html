@@ -164,6 +164,10 @@ window.__setup = async function(cfg, ionToken) {
   viewer.scene.globe.maximumScreenSpaceError = 1.5;
   viewer.scene.fog.enabled = true;
   viewer.scene.skyAtmosphere.show = true;
+  // terrain height exaggeration — makes mountain/plain relief legible from a distance
+  const EXAG = cfg.verticalExaggeration ?? 1.0;
+  viewer.scene.verticalExaggeration = EXAG;
+  viewer.scene.verticalExaggerationRelativeHeight = 0;
 
   // Google Photorealistic 3D Tiles (ion asset 2275207) — requires ion token
   if (cfg.buildings3d && ionToken) {
@@ -219,7 +223,7 @@ window.__setup = async function(cfg, ionToken) {
       const cartos = anchors.map(a => Cesium.Cartographic.fromDegrees(a.lng, a.lat));
       await Cesium.sampleTerrainMostDetailed(viewer.terrainProvider, cartos);
       anchors.forEach((a, i) => {
-        const pos = Cesium.Cartesian3.fromDegrees(a.lng, a.lat, cartos[i].height + 2);
+        const pos = Cesium.Cartesian3.fromDegrees(a.lng, a.lat, cartos[i].height * EXAG + 20);
         a.e.position = pos;
         if (a.e.point) a.e.point.heightReference = Cesium.HeightReference.NONE;
         a.e.label.heightReference = Cesium.HeightReference.NONE;

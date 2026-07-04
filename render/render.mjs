@@ -73,7 +73,22 @@ function compileShots(scene) {
     return [poi.lng, poi.lat];
   }
 
-  const total = scene.shots.reduce((s, sh) => s + (sh.duration ?? 5), 0);
+  // resolve each shot's duration up front — travel auto-paces by path length so a
+  // 300 km route and a 1500 km route both play at a comfortable, readable ground speed
+  // instead of a hard-coded time. groundSpeed default calibrated to ~1000 km ≈ 65 s.
+  function pathLenM(p) { let L = 0; for (let i = 1; i < p.length; i++) L += distM(p[i-1], p[i]); return L; }
+  function shotDuration(sh) {
+    if (sh.duration != null) return sh.duration;
+    if (sh.type === 'travel') {
+      const path = sh.path || scene.routes?.[0]?.path;
+      if (path && path.length >= 2) {
+        const gs = sh.groundSpeed ?? 15000;   // metres of ground per second
+        return Math.max(6, Math.min(180, pathLenM(path) / gs));
+      }
+    }
+    return 5;
+  }
+  const total = scene.shots.reduce((s, sh) => s + shotDuration(sh), 0);
   const kfs = [];               // flat list for classic/dip path + composition checks
   const transitions = [];       // dip overlays
   const segs = [{ kfs: [], startSec: 0, tailSec: 0 }];
@@ -82,7 +97,7 @@ function compileShots(scene) {
   const pushKf = k => { kfs.push(k); segs[segs.length-1].kfs.push(k); };
 
   for (const sh of scene.shots) {
-    const dur = sh.duration ?? 5;
+    const dur = shotDuration(sh);
     if (sh.type === 'flyin') {
       pitch = sh.pitch ?? -33;
       V = sh.viewFrom ?? (V ?? 180);
@@ -135,11 +150,12 @@ function compileShots(scene) {
       // Ideal for long linear features (routes, mountain ranges) — trades time for coverage.
       const path = sh.path || scene.routes?.[0]?.path;
       if (!path || path.length < 2) { console.error('travel needs a path (or a route to follow)'); process.exit(1); }
+      console.log(`  travel: ${Math.round(pathLenM(path)/1000)}km path -> ${dur.toFixed(1)}s @ ${Math.round(pathLenM(path)/dur/1000*10)/10}km/s`);
       const offB = sh.offsetBearing ?? 0;        // compass bearing from path point → camera
       const offD = sh.offsetDist ?? 60000;       // lateral offset, m
       const alt  = sh.alt ?? 30000;              // camera altitude, m
       Hgt = sh.targetHeight ?? Hgt;
-      const nS = sh.samples ?? 12;
+      const nS = sh.samples ?? Math.max(8, Math.round(dur / 1.5));   // ~1 keyframe / 1.5 s
       const ahead = sh.lookAhead ?? 0;           // bias look-at forward along path (0..0.15 feels like travel)
       const cum = [0];
       for (let i = 1; i < path.length; i++) cum.push(cum[i-1] + distM(path[i-1], path[i]));

@@ -38,16 +38,18 @@ Renders a Cesium (CesiumJS) 3D globe scene frame-by-frame in headless Chrome, th
 ### travel shot — for long linear features (corridors, ranges, road trips)
 
 ```jsonc
-{ "type": "travel", "duration": 16,
+{ "type": "travel",          // duration OMITTED → auto-paced by path length (recommended)
   "path": [[lng,lat],...],   // or omit to follow routes[0].path
   "offsetBearing": 32,       // compass bearing from each path point → camera (32 = camera to the NE)
-  "offsetDist": 95000,       // lateral offset from the path, metres
-  "alt": 40000,              // camera altitude, metres
-  "targetHeight": 1800,      // elevation the camera looks at
-  "samples": 16,             // keyframes along the path (denser = smoother)
-  "lookAhead": 0.06,         // bias the look-at point forward along the path (0..0.15 = travel feel)
-  "reverse": false }         // travel the path end→start instead
+  "offsetDist": 52000,       // lateral offset from the path, metres
+  "alt": 16000,              // camera altitude, metres (LOW for relief — see below)
+  "targetHeight": 3400,      // elevation the camera looks at
+  "groundSpeed": 15000,      // metres of ground per second; duration = pathLength / groundSpeed
+  "lookAhead": 0.05 }        // bias look-at forward along path (0..0.15 = travel feel)
+  // duration: <n>           // optional hard override; samples auto ≈ duration/1.5 if omitted
 ```
+
+**Auto-pacing (do NOT hard-code duration for travel):** omit `duration` and the shot times itself from the path length ÷ `groundSpeed` (default 15000 m/s, calibrated so ~1000 km plays in ~65 s). A 300 km leg and a 1500 km loop then both read at a comfortable, consistent speed. Slow it globally by lowering `groundSpeed` (e.g. 12000); speed up with a higher value. Keyframe count auto-scales too.
 The camera holds a constant lateral offset + altitude and glides from one end of the path to the other, always looking at the moving path point (linear interpolation = constant-speed pan, no easing pump). This is the RIGHT tool for a ~1000 km corridor: a static shot must go to space to see it all, but a travel shot stays low and reveals it over time.
 
 **Pacing & relief for travel shots** (learned tuning the Hexi Corridor):
@@ -63,9 +65,16 @@ The single biggest lever for conveying elevation. Mountain ranges stand up as wa
 
 The compiler centers flyin/orbit on the bounding box of all POIs/routes/regions (or the shot's `target`), computes slant range from spread (`distanceFactor`, default 3.8), derives heading from bearing math automatically, and warns if any in-segment POI drifts >28° off-axis (travel shots skip this check — they pan past POIs by design). Total duration = sum of shot durations. `cut: true` jumps the camera at the shot boundary under a dip-to-white/black transition (`transition`, `transitionDuration` default 0.8s). Hand-written `cameraPath` still works for full control.
 
+## Label sizing
+
+```jsonc
+"labelScale": 3   // multiply POI (city/mountain) label + dot size; default 1. Big travel/overview shots want 2–3.
+```
+Scales the label font, outline, dot, and — crucially — the anti-collision stacking gaps and edge-alignment, so 3× labels still never overlap or clip off-screen. The title has its own fixed size (unaffected).
+
 ## Built-in behaviors (no config needed)
 
-- **Label anti-collision**: every frame, labels are projected to screen space and de-overlapped — POI labels stack upward, the big title moves out of the way (sticky offsets, no jitter). POI/title anchors are terrain-height-sampled so projection is accurate on mountains. When a label is pushed up, a white leader line connects it to its dot.
+- **Label anti-collision**: every frame, labels are projected to screen space and de-overlapped — POI labels stack upward (gaps scale with font size), the big title moves out of the way (sticky offsets, no jitter). Labels near a frame edge auto-align inward (left/right origin) so big labels never clip off-screen. POI/title anchors are terrain-height-sampled so projection is accurate on mountains. When a label is pushed up, a white leader line connects it to its dot.
 - **POI pop-in**: dots scale in with a back-ease bounce; labels fade/trail in over 0.6 s after their `appear` time.
 - **Region draw-on**: regions animate like routes (`tStart`/`tEnd` outline draw; `appear` still works as tStart). Optional `"fill": true, "fillOpacity": 0.10` fades a terrain-draped tint after the outline completes.
 

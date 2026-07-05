@@ -9,6 +9,7 @@ MVP（已做）：单场景 JSON → 三维飞行 + POI 打点 + 发光路线描
 - [x] 地形垂直夸张 verticalExaggeration — 已实现：场景级参数(2~2.5倍)，山体拔地而起、落差感强；POI/标签/路线锚点同步抬升不悬浮。配合低机位+浅俯角是"落差感"三件套
 - [x] 夜间模式 nightMode — 已实现：压暗卫星影像+暮色天空，发光路线/圆点/标签保持明亮（像夜爬头灯串上山）；nightBrightness 可调。用于夜爬/夜景路线
 - [ ] 真实昼夜光照（enableLighting + 按时刻定太阳角）；日出/日落暖色渐变（配合夜爬看日出结尾）
+- [ ] **targetHeight 按 verticalExaggeration 自动缩放** — 现坑：开夸张后地形/锚点抬到 h×E，但 shot 的 targetHeight/alt 按原值喂给相机瞄准数学，导致相机瞄在墙体下方、主体飘到画面顶端（金山岭长城首渲踩到）。当前靠手动把 targetHeight 填成夸张后高度(500→1000)绕过，已写进 SKILL.md gotcha。根治：compileShots 里对 targetHeight/alt 乘以 scene.verticalExaggeration。**注意别回归已手调场景**（taishan-night 的 1900 是带 bug 手调出来的），改后需重渲校验泰山夜爬等旧场景
 - [ ] 大气/光照调优：太阳角度按拍摄时间设定，海面高光
 
 ## P0 — 实战暴露的问题（普陀山/泰山两次成片得出）

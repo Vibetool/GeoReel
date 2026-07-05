@@ -65,6 +65,14 @@ The single biggest lever for conveying elevation. Mountain ranges stand up as wa
 
 The compiler centers flyin/orbit on the bounding box of all POIs/routes/regions (or the shot's `target`), computes slant range from spread (`distanceFactor`, default 3.8), derives heading from bearing math automatically, and warns if any in-segment POI drifts >28° off-axis (travel shots skip this check — they pan past POIs by design). Total duration = sum of shot durations. `cut: true` jumps the camera at the shot boundary under a dip-to-white/black transition (`transition`, `transitionDuration` default 0.8s). Hand-written `cameraPath` still works for full control.
 
+## Night mode (夜爬 / night routes)
+
+```jsonc
+"nightMode": true,
+"nightBrightness": 0.42   // 0.3–0.5; lower = darker map. Default 0.4
+```
+Dims the satellite imagery to dusk and darkens the sky, but leaves entities (glowing routes, POI dots, labels) at full brightness — so a route reads like a string of headlamps climbing a dark mountain. Pair with a warm route color (`#ffcf3f`) and `verticalExaggeration` for a night-climb hero shot. Imagery is daytime data tinted dark (not real night lighting), which keeps terrain shape readable.
+
 ## Label sizing
 
 ```jsonc

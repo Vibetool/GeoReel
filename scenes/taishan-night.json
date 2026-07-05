@@ -1,0 +1,32 @@
+{
+  "name": "taishan-night",
+  "preset": "1080p", "fps": 30,
+  "verticalExaggeration": 2.4,
+  "labelScale": 2.2,
+  "nightMode": true,
+  "nightBrightness": 0.42,
+  "shots": [
+    { "type": "flyin", "duration": 5, "pitch": -30, "viewFrom": 178,
+      "targetHeight": 1900, "distanceFactor": 4.2 },
+    { "type": "orbit", "duration": 7, "sweep": -16, "approach": 0.92 }
+  ],
+  "title": { "text": "泰山夜爬 · 看日出", "lng": 117.088, "lat": 36.283, "appear": 0.30 },
+  "pois": [
+    { "name": "红门 · 夜爬起点", "lng": 117.1250, "lat": 36.2085, "appear": 0.40 },
+    { "name": "中天门", "lng": 117.1090, "lat": 36.2295, "appear": 0.45 },
+    { "name": "十八盘", "lng": 117.1055, "lat": 36.2440, "appear": 0.50 },
+    { "name": "南天门", "lng": 117.1040, "lat": 36.2505, "appear": 0.55 },
+    { "name": "玉皇顶 · 日观峰(看日出)", "lng": 117.1056, "lat": 36.2544, "appear": 0.60 }
+  ],
+  "routes": [
+    { "color": "#ffcf3f", "width": 10, "tStart": 0.55, "tEnd": 0.95,
+      "path": [
+        [117.1250, 36.2085], [117.1210, 36.2160], [117.1160, 36.2220],
+        [117.1090, 36.2295], [117.1070, 36.2370], [117.1055, 36.2440],
+        [117.1040, 36.2505], [117.1056, 36.2544]
+      ] }
+  ],
+  "audio": {
+    "tts": { "text": "泰山夜爬，从红门出发，踏着夜色一路向上。过中天门，登上最陡的紧十八盘，抵达南天门。在日观峰静静守候，看第一缕晨光跃出云海——这就是五岳独尊的泰山日出。" }
+  }
+}

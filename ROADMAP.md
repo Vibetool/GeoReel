@@ -7,6 +7,8 @@ MVP（已做）：单场景 JSON → 三维飞行 + POI 打点 + 发光路线描
 - [x] 1920x1080 / 4K 预设 — 已实现 preset 字段，UI 元素随分辨率等比缩放
 - [x] Google Photorealistic 3D Tiles — 已实现 buildings3d 选项（ion asset 2275207，隐藏 globe，等待 tileset 加载）；城市近景要点：minSlant 1200–2000 + pitch -18~-25 + targetHeight 半楼高
 - [x] 地形垂直夸张 verticalExaggeration — 已实现：场景级参数(2~2.5倍)，山体拔地而起、落差感强；POI/标签/路线锚点同步抬升不悬浮。配合低机位+浅俯角是"落差感"三件套
+- [x] 夜间模式 nightMode — 已实现：压暗卫星影像+暮色天空，发光路线/圆点/标签保持明亮（像夜爬头灯串上山）；nightBrightness 可调。用于夜爬/夜景路线
+- [ ] 真实昼夜光照（enableLighting + 按时刻定太阳角）；日出/日落暖色渐变（配合夜爬看日出结尾）
 - [ ] 大气/光照调优：太阳角度按拍摄时间设定，海面高光
 
 ## P0 — 实战暴露的问题（普陀山/泰山两次成片得出）

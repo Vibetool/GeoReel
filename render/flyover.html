@@ -183,6 +183,18 @@ window.__setup = async function(cfg, ionToken) {
   const EXAG = cfg.verticalExaggeration ?? 1.0;
   viewer.scene.verticalExaggeration = EXAG;
   viewer.scene.verticalExaggerationRelativeHeight = 0;
+  // night mode — dim the satellite imagery to dusk so glowing routes/labels read like
+  // headlamps on a dark mountain. Entities (route glow, dots, labels) are not imagery,
+  // so they stay full-bright against the darkened map.
+  if (cfg.nightMode) {
+    const lyr = viewer.imageryLayers.get(0);
+    if (lyr) { lyr.brightness = cfg.nightBrightness ?? 0.4; lyr.saturation = 0.65; lyr.hue = 0.03; }
+    viewer.scene.skyAtmosphere.brightnessShift = -0.7;
+    viewer.scene.skyAtmosphere.hueShift = 0.05;
+    viewer.scene.backgroundColor = Cesium.Color.fromCssColorString('#05070f');
+    viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString('#05070f');
+    viewer.scene.fog.density = 0.0003;
+  }
 
   // Google Photorealistic 3D Tiles (ion asset 2275207) — requires ion token
   if (cfg.buildings3d && ionToken) {

@@ -4,41 +4,33 @@
 
 [简体中文](./README.zh-CN.md) · English
 
-GeoReel turns a small scene description into a "三维地图看世界"-style flyover video: a camera flies over real satellite terrain, glowing routes draw themselves along the ground, city/landmark labels pop in and never overlap, and an optional narration track plays over the top. No After Effects, no Google Earth Studio, no manual keyframing — you describe *what* to show and GeoReel works out the camera math.
+Describe a place, a route, and a few camera moves in JSON. GeoReel flies a camera over real satellite terrain, draws glowing routes along the ground, pops in labels that never overlap, and renders an MP4 — the camera math, tile loading and label layout are handled for you. No After Effects, no Earth Studio, no manual keyframing.
 
-It ships as an **agent skill**: hand the folder to a coding agent (Claude Code, etc.) and say *"make a flyover of Mount Hua marking the peaks and the climbing route"* — the agent authors the scene, previews it, and renders the MP4.
+It ships as an **agent skill**: hand the folder to a coding agent (Claude Code, etc.) and say *"make a flyover of Mount Hua marking the peaks and the climbing route"* — it authors the scene, previews it, and renders the video.
 
 <p align="center">
   <img src="docs/huashan.jpg" width="49%" alt="Mount Hua flyover"/>
   <img src="docs/hexi-travel.jpg" width="49%" alt="Hexi Corridor travel shot"/>
   <br/>
+  <img src="docs/taishan-night.jpg" width="49%" alt="Mount Tai night climb"/>
   <img src="docs/shanghai.jpg" width="49%" alt="Shanghai Lujiazui with Google 3D Tiles"/>
 </p>
 
-## What it can do
+## What it does
 
-| Capability | Description |
+| | |
 | --- | --- |
-| **Shot language** | Describe intent (`flyin`, `orbit`, `travel`) — the compiler solves camera position, heading and slant range from the geometry. No hand-written keyframes. |
-| **Real 3D terrain** | Cesium World Terrain + World Imagery via a (free) Cesium ion token — actual mountain relief. |
-| **Travel shots** | For long linear routes (a 1000 km corridor, a mountain range): the camera glides along the path at constant speed, revealing it over time instead of retreating to space. |
-| **POIs** | Green markers + labels that **pop in** with a bounce and **never overlap** (screen-space anti-collision + leader lines), terrain-height-aware. |
-| **Routes** | Glowing polylines that **draw themselves** segment by segment as the camera moves. |
-| **Regions** | Glowing area outlines that draw on, with an optional terrain-draped fill. |
-| **Transitions** | Dip-to-white/black, or true crossfade (`xfade`) between shots. |
-| **Google 3D Tiles** | Photorealistic city buildings (`buildings3d`) for urban hero shots. |
-| **Titles** | Big geo-anchored titles that ride the terrain. |
-| **Audio** | Optional TTS narration (edge-tts → macOS `say`) and/or looped BGM. Omit for a silent video. |
-| **Preview mode** | Render 3 verification frames in ~1 min to check framing before committing to a full render. |
-| **Parallel + resilient** | `--workers N` renders frame chunks concurrently; resumes on disk, self-heals on browser crash. |
-| **1080p / 4K presets** | UI elements scale proportionally so composition is identical, just sharper. |
+| **Shot language** | State intent — `flyin`, `orbit`, `travel` — and the compiler solves camera position, heading and range. Travel shots glide along long routes (a 1000 km corridor, a mountain range) instead of retreating to space. |
+| **Real 3D terrain** | Cesium World Terrain + Imagery via a free ion token; optional Google Photorealistic 3D Tiles for city buildings. |
+| **Self-drawing overlays** | Routes and region outlines that unspool segment by segment; POI markers that pop in and never overlap (screen-space anti-collision + leader lines); geo-anchored titles. |
+| **Night mode** | Dusk-dimmed map for night-route and sunrise-climb shots — the glowing route reads like a string of headlamps up a dark ridge. |
+| **Transitions & audio** | Dip-to-white/black or true crossfade between shots; optional TTS narration and/or looped BGM. |
+| **Built for iteration** | `--preview` renders 3 frames in ~1 min to check framing; `--workers N` renders in parallel, resumes on disk, self-heals on crash; 1080p / 4K presets. |
 
 ## Requirements
 
-- **Node.js** ≥ 18
-- **Google Chrome** (used headless for rendering)
-- **ffmpeg** on your `PATH`
-- **Cesium ion access token** — free at <https://ion.cesium.com> → *Access Tokens*. Without one, GeoReel falls back to flat Esri satellite imagery (no 3D relief).
+- **Node.js** ≥ 18 · **Google Chrome** (headless rendering) · **ffmpeg** on `PATH`
+- **Cesium ion token** — free at <https://ion.cesium.com> → *Access Tokens*. Without one, GeoReel falls back to flat Esri imagery (no 3D relief).
 
 ## Install
 
@@ -54,14 +46,14 @@ export CESIUM_ION_TOKEN="your-ion-token"
 ```bash
 cd render
 
-# 1. Preview: 3 frames (~1 min) to check coordinates & framing
+# Preview 3 frames (~1 min) — check coordinates & framing first
 node render.mjs ../scenes/huashan.json /tmp/out --preview
 
-# 2. Full render (writes /tmp/out/huashan.mp4, + huashan-audio.mp4 if the scene has audio)
+# Full render → /tmp/out/huashan.mp4 (+ huashan-audio.mp4 if the scene has audio)
 node render.mjs ../scenes/huashan.json /tmp/out --workers=2
 ```
 
-Always `--preview` first — it catches a wrong coordinate or a bad camera angle 6× faster than a full render.
+Always `--preview` first — it catches a wrong coordinate or bad angle 6× faster than a full render.
 
 ## A scene in 20 lines
 
@@ -85,26 +77,26 @@ Always `--preview` first — it catches a wrong coordinate or a bad camera angle
 }
 ```
 
-Full field reference and all shot types are documented in [`SKILL.md`](./SKILL.md).
+Full field reference and every shot type live in [`SKILL.md`](./SKILL.md).
 
-## Included example scenes
+## Example scenes
 
 | Scene | Shows off |
 | --- | --- |
 | `huashan.json` | flyin + orbit, 3D peaks, route draw-on, label anti-collision |
-| `taishan-crossfade.json` | multi-shot with a true crossfade, region draw-on, TTS |
+| `taishan-night.json` | night mode + narrated climb to the summit |
+| `jinshanling-sunrise.json` | travel glide along the Great Wall at dawn + narration |
 | `hexi-travel.json` | **travel** shot along the 1000 km Hexi Corridor |
 | `shanghai-3dtiles.json` | Google Photorealistic 3D Tiles city buildings |
-| `putuoshan-demo.json` | the original minimal demo |
 
-## Using it as an agent skill
+## As an agent skill
 
-Drop the folder into your agent's skills directory (for Claude Code: `~/.claude/skills/geo-flyover/` or a project `.claude/skills/`). The agent reads [`SKILL.md`](./SKILL.md) for the workflow and schema, then authors + previews + renders scenes on request. See [`ROADMAP.md`](./ROADMAP.md) for what's built and what's next.
+Drop the folder into your agent's skills directory (Claude Code: `~/.claude/skills/geo-flyover/`). The agent reads [`SKILL.md`](./SKILL.md) for the workflow and schema, then authors, previews and renders scenes on request. Roadmap in [`ROADMAP.md`](./ROADMAP.md).
 
 ## Notes & attribution
 
-- Cesium ion imagery/terrain and Google Photorealistic 3D Tiles require **visible attribution** — the renderer keeps the Cesium credit on screen. Do not crop it out of published videos.
-- The **free** Cesium ion tier and Google 3D Tiles are for non-commercial / evaluation use. For commercial distribution, check the Cesium ion and Google Maps Platform terms.
+- Cesium ion and Google 3D Tiles require **visible attribution** — the renderer keeps the Cesium credit on screen; don't crop it from published videos.
+- The free Cesium ion tier and Google 3D Tiles are for non-commercial / evaluation use. Check the respective terms before commercial distribution.
 - Satellite imagery copyright belongs to the data providers.
 
 ## License

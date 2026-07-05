@@ -1,6 +1,6 @@
 ---
 name: geo-flyover
-description: Generate 3D satellite-map flyover videos ("三维地图看世界" style) — cinematic camera flight over real terrain with POI markers, glowing route/region overlays, and geo-anchored titles. Use when the user wants a 3D map animation / flyover video of a place, a travel-route showcase video, or asks to reproduce the 三维地图 genre. Input is a scene JSON (target, camera keyframes, POIs, routes); output is an MP4.
+description: Generate cinematic 3D satellite-map flyover videos — a camera flight over real terrain with POI markers, glowing route/region overlays, and geo-anchored titles. Use when the user wants a 3D map animation / flyover video of a place or a travel-route showcase video. Input is a scene JSON (target, camera keyframes, POIs, routes); output is an MP4.
 ---
 
 # geo-flyover — 三维地图飞行动效生成器
@@ -59,7 +59,7 @@ The camera holds a constant lateral offset + altitude and glides from one end of
 ## verticalExaggeration (scene-level) — make terrain relief pop
 
 ```jsonc
-"verticalExaggeration": 2.3   // multiply all terrain heights; 1 = real, 2–2.5 = the 三维地图看世界 look
+"verticalExaggeration": 2.3   // multiply all terrain heights; 1 = real, 2–2.5 = strong stand-up relief
 ```
 The single biggest lever for conveying elevation. Mountain ranges stand up as walls; canyon/gully relief becomes legible from a distance. POI/label/route anchors are height-adjusted to match, so nothing floats or sinks. Use it for any terrain-relief story (corridors, ranges, canyons); leave it at 1 for city (`buildings3d`) shots. Set each POI's `appear` to roughly when the camera passes it; POIs behind the camera naturally leave frame. Draw the route with `tStart`/`tEnd` spanning the shot so the line unspools as you fly.
 

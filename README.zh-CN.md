@@ -34,14 +34,15 @@
 
 ## 安装
 
-```bash
-git clone https://github.com/Vibetool/GeoReel.git
-cd GeoReel/render
-npm install
-export CESIUM_ION_TOKEN="你的-ion-token"
-```
+把仓库地址交给你的编码智能体（Claude Code 等）：
+
+> **照着 https://github.com/Vibetool/GeoReel 安装 GeoReel skill**
+
+它会把仓库克隆进技能目录（Claude Code：`~/.claude/skills/geo-flyover/`），在 `render/` 里 `npm install`，并读取 [`SKILL.md`](./SKILL.md) 学习流程与字段。之后你只需描述想要的飞行视频，它就自动写场景、预览、渲染。请确保上面的[环境要求](#环境要求)就绪，并设置免费的 `CESIUM_ION_TOKEN`；开发路线见 [`ROADMAP.md`](./ROADMAP.md)。
 
 ## 快速上手
+
+底层其实就两条命令——智能体会替你执行，你也可以自己跑：
 
 ```bash
 cd render

@@ -34,14 +34,15 @@ It ships as an **agent skill**: hand the folder to a coding agent (Claude Code, 
 
 ## Install
 
-```bash
-git clone https://github.com/Vibetool/GeoReel.git
-cd GeoReel/render
-npm install
-export CESIUM_ION_TOKEN="your-ion-token"
-```
+Hand the repo URL to your coding agent (Claude Code, etc.):
+
+> **Install the GeoReel skill from https://github.com/Vibetool/GeoReel**
+
+It clones the repo into your skills directory (Claude Code: `~/.claude/skills/geo-flyover/`), runs `npm install` in `render/`, and reads [`SKILL.md`](./SKILL.md) for the workflow and schema. Then just describe the flyover you want — it authors the scene, previews it, and renders the MP4. Make sure the [requirements](#requirements) above are in place and set a free `CESIUM_ION_TOKEN`; roadmap in [`ROADMAP.md`](./ROADMAP.md).
 
 ## Quick start
+
+Under the hood a render is two commands — the agent runs them for you, or run them yourself:
 
 ```bash
 cd render
@@ -88,10 +89,6 @@ Full field reference and every shot type live in [`SKILL.md`](./SKILL.md).
 | `jinshanling-sunrise.json` | travel glide along the Great Wall at dawn + narration |
 | `hexi-travel.json` | **travel** shot along the 1000 km Hexi Corridor |
 | `shanghai-3dtiles.json` | Google Photorealistic 3D Tiles city buildings |
-
-## As an agent skill
-
-Drop the folder into your agent's skills directory (Claude Code: `~/.claude/skills/geo-flyover/`). The agent reads [`SKILL.md`](./SKILL.md) for the workflow and schema, then authors, previews and renders scenes on request. Roadmap in [`ROADMAP.md`](./ROADMAP.md).
 
 ## Notes & attribution
 
